@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Valheim Server Manager</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>⚔️ Valheim Server Manager</h1>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div id="statusPill" class="pill pill-stopped">Checking...</div>
+      <button id="btnLogout" class="btn" style="display:none; padding:5px 12px; font-size:12.5px;">Sign out</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="server">Server</button>
+    <button class="tab-btn" data-tab="mods">Mods</button>
+    <button class="tab-btn" data-tab="players">Players</button>
+    <button class="tab-btn" data-tab="access">Access</button>
+    <button class="tab-btn" data-tab="backups">Backups</button>
+  </nav>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="tab-panel active">
+      <div class="card">
+        <div class="row-buttons">
+          <button id="btnStart" class="btn btn-primary">▶ Start</button>
+          <button id="btnStop" class="btn btn-danger">■ Stop</button>
+          <button id="btnRestart" class="btn">⟳ Restart now</button>
+        </div>
+        <div class="meta" id="serverMeta">—</div>
+        <div id="serverStats"></div>
+
+        <h3>Scheduled restart</h3>
+        <p>Warns players in Discord before it happens (20/10/5/1 min checkpoints, whichever fit in the delay you choose). Vanilla Valheim has no way to broadcast into the game itself, so Discord is the only channel this can use.</p>
+        <div id="scheduledRestartInfo"></div>
+        <div class="row-buttons">
+          <input type="number" id="restartMinutes" placeholder="Minutes" min="1" style="max-width:120px;" value="10" />
+          <button id="btnScheduleRestart" class="btn btn-primary">Schedule restart</button>
+          <button id="btnCancelRestart" class="btn btn-danger" style="display:none;">Cancel</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Share with players</h3>
+        <div id="shareInfo">
+          <p class="meta">Start the server to get connection details.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Online now</h3>
+        <ul id="dashboardOnlineList" class="mod-list"></ul>
+      </div>
+
+      <div class="card">
+        <div class="row-buttons" style="justify-content: space-between; align-items: center;">
+          <h3 style="margin:0;">Console</h3>
+          <input type="text" id="serverLogFilter" placeholder="Filter... (e.g. error, died, connect)" style="max-width:260px;" />
+        </div>
+        <pre id="logServer" class="console"></pre>
+      </div>
+    </section>
+
+    <!-- SERVER (install/update + settings) -->
+    <section id="tab-server" class="tab-panel">
+      <div class="card">
+        <p>Downloads SteamCMD if needed, then installs or updates the Valheim dedicated server (app 896660) into your configured install path below.</p>
+        <button id="btnInstall" class="btn btn-primary">⬇ Install / update server</button>
+        <pre id="logInstall" class="console" style="margin-top:12px; height:160px;"></pre>
+      </div>
+
+      <div class="card">
+        <h3>Paths</h3>
+        <label>SteamCMD path
+          <input type="text" id="cfgSteamCmdPath" />
+        </label>
+        <label>Server install path
+          <input type="text" id="cfgServerInstallPath" />
+        </label>
+
+        <h3>Server</h3>
+        <label>Server name
+          <input type="text" id="cfgServerName" />
+        </label>
+        <label>World name
+          <input type="text" id="cfgWorldName" />
+        </label>
+        <div class="row-buttons" style="margin: 6px 0 0;">
+          <select id="worldPicker" style="flex:1;">
+            <option value="">— Pick an existing world instead —</option>
+          </select>
+          <button id="btnOpenWorldsFolder" class="btn">Open worlds folder</button>
+        </div>
+        <p class="meta">Picking a world here just fills in the name above — remember to Save settings afterward.</p>
+        <label>Password (min. 5 characters)
+          <input type="text" id="cfgPassword" />
+        </label>
+        <label>Port
+          <input type="number" id="cfgPort" />
+        </label>
+        <label class="checkbox"><input type="checkbox" id="cfgPublic" /> Listed publicly</label>
+        <label class="checkbox"><input type="checkbox" id="cfgCrossplay" /> Crossplay (Xbox/PS/PC)</label>
+
+        <h3>Saves and backups</h3>
+        <label>Save interval (seconds)
+          <input type="number" id="cfgSaveInterval" />
+        </label>
+        <label>Backup count
+          <input type="number" id="cfgBackupCount" />
+        </label>
+        <label>Short backup interval (seconds)
+          <input type="number" id="cfgBackupShort" />
+        </label>
+        <label>Long backup interval (seconds)
+          <input type="number" id="cfgBackupLong" />
+        </label>
+
+        <h3>World difficulty</h3>
+        <label>Preset
+          <select id="cfgPreset">
+            <option value="normal">Normal</option>
+            <option value="casual">Casual</option>
+            <option value="easy">Easy</option>
+            <option value="hard">Hard</option>
+            <option value="hardcore">Hardcore</option>
+            <option value="immersive">Immersive</option>
+            <option value="hammer">Hammer</option>
+          </select>
+        </label>
+        <p class="meta">Individual modifiers below apply after the preset, so they override it — set the preset first, then adjust anything specific. Combat, death penalty, and portals don't have official published multiplier numbers (Iron Gate never released exact values for these), so only labels are shown; resources and raids do, and those are shown.</p>
+        <label>Combat
+          <select id="cfgModifierCombat">
+            <option value="">Default (from preset)</option>
+            <option value="veryeasy">Very easy</option>
+            <option value="easy">Easy</option>
+            <option value="hard">Hard</option>
+            <option value="veryhard">Very hard</option>
+          </select>
+        </label>
+        <label>Death penalty
+          <select id="cfgModifierDeathpenalty">
+            <option value="">Default (from preset)</option>
+            <option value="casual">Casual (keep everything)</option>
+            <option value="veryeasy">Very easy</option>
+            <option value="easy">Easy</option>
+            <option value="hard">Hard</option>
+            <option value="hardcore">Hardcore (lose everything)</option>
+          </select>
+        </label>
+        <label>Resource drops
+          <select id="cfgModifierResources">
+            <option value="">Default (from preset)</option>
+            <option value="most">Most (3x)</option>
+            <option value="muchmore">Much more (2x)</option>
+            <option value="more">More (1.5x)</option>
+            <option value="less">Less (0.75x)</option>
+            <option value="muchless">Much less (0.5x)</option>
+          </select>
+        </label>
+        <label>Raids
+          <select id="cfgModifierRaids">
+            <option value="">Default (from preset, rate 100)</option>
+            <option value="none">None (raids off)</option>
+            <option value="muchless">Much less frequent (rate 200)</option>
+            <option value="less">Less frequent (rate 150)</option>
+            <option value="more">More frequent (rate 60)</option>
+            <option value="muchmore">Much more frequent (rate 30)</option>
+          </select>
+        </label>
+        <p class="meta">Raids uses an event rate rather than a multiplier — a higher number means a longer wait between raids, so "much less frequent" has the highest rate.</p>
+        <label>Portals
+          <select id="cfgModifierPortals">
+            <option value="">Default (from preset)</option>
+            <option value="casual">Casual (ores/metals allowed)</option>
+            <option value="hard">Hard</option>
+            <option value="veryhard">Very hard (portals disabled)</option>
+          </select>
+        </label>
+        <label class="checkbox"><input type="checkbox" id="cfgSetKeyNoBuildCost" /> No build cost (hammer mode — flags the world as cheated in 1.0)</label>
+        <label class="checkbox"><input type="checkbox" id="cfgSetKeyPlayerEvents" /> Player events (raids triggered by each player's own progress)</label>
+        <label class="checkbox"><input type="checkbox" id="cfgSetKeyPassiveMobs" /> Passive mobs (creatures don't attack first)</label>
+        <label class="checkbox"><input type="checkbox" id="cfgSetKeyNoMap" /> No map for anyone</label>
+        <p class="meta">These apply from the world's next start — no need for a connected admin to run console commands. An admin can also change them live in-game with setworldmodifier/setworldpreset/resetworldkeys, but that won't show up here since it happens outside this app.</p>
+
+        <h3>Custom paths <span class="meta">(optional)</span></h3>
+        <label>Save directory <span class="meta">(blank = server's default location)</span>
+          <input type="text" id="cfgSaveDir" placeholder="D:\ValheimSaves" />
+        </label>
+        <label>Log file path <span class="meta">(blank = console output only)</span>
+          <input type="text" id="cfgLogFilePath" placeholder="D:\ValheimSaves\logs\server.log" />
+        </label>
+
+        <h3>Advanced</h3>
+        <label>Extra launch args
+          <input type="text" id="cfgExtraArgs" placeholder="-logFile logs\server.log" />
+        </label>
+
+        <div class="row-buttons" style="margin-top:16px;">
+          <button id="btnSaveConfig" class="btn btn-primary">Save settings</button>
+          <span id="saveStatus" class="meta"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Restart warnings</h3>
+        <p>Sent to Discord only — vanilla Valheim has no way to broadcast a message into the game itself, so there's no in-game equivalent to offer here.</p>
+      </div>
+
+      <div class="card">
+        <h3>Auto mod-update</h3>
+        <label class="checkbox"><input type="checkbox" id="cfgAutoUpdateEnabled" /> Automatically check for and apply mod updates</label>
+        <label>Check interval (hours)
+          <input type="number" id="cfgAutoUpdateIntervalHours" min="1" />
+        </label>
+        <label class="checkbox"><input type="checkbox" id="cfgAutoBackupBeforeUpdate" /> Back up the world before applying updates</label>
+        <p>If the server is running when updates are applied, a restart is scheduled with the same 10/5/1-minute warnings as a manual scheduled restart.</p>
+
+        <h3>Crash detection</h3>
+        <label class="checkbox"><input type="checkbox" id="cfgAutoRestartOnCrash" /> Automatically restart if the server exits unexpectedly</label>
+        <label>Max restart attempts <span class="meta">before giving up</span>
+          <input type="number" id="cfgCrashMaxAttempts" min="1" />
+        </label>
+        <label>within this many minutes
+          <input type="number" id="cfgCrashWindowMinutes" min="1" />
+        </label>
+        <p>Stops trying after too many crashes in a short window, so a genuinely broken mod can't trigger an endless restart loop — you'll get a Discord notification (if enabled) when it gives up.</p>
+
+        <h3>Daily restart</h3>
+        <label class="checkbox"><input type="checkbox" id="cfgDailyRestartEnabled" /> Automatically restart every day</label>
+        <label>At this time (24h, this machine's local time)
+          <input type="text" id="cfgDailyRestartTime" placeholder="04:00" />
+        </label>
+        <p>Uses the same 20/10/5/1-minute warnings as a manual scheduled restart. Only fires if the server is already running at the time.</p>
+
+        <h3>Start on Windows login</h3>
+        <p>Adds a shortcut to your Startup folder so this manager launches automatically when you log in — the game server itself still needs Start clicked (or use auto-restart/daily-restart settings to keep it running).</p>
+        <div id="autostartStatus" class="meta" style="margin-bottom:8px;"></div>
+        <label class="checkbox"><input type="checkbox" id="cfgAutostartEnabled" /> Launch this manager automatically on Windows login</label>
+
+        <div class="row-buttons" style="margin-top:16px;">
+          <button id="btnSaveConfig2" class="btn btn-primary">Save settings</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Discord notifications</h3>
+        <p>Manager-level events (server start/stop, restart warnings, mod updates). For in-game events — joins, leaves, deaths, shouts — install DiscordConnector from the Mods tab instead; it reports those directly and far more reliably than log-scraping can.</p>
+        <label>Webhook URL
+          <input type="text" id="cfgDiscordWebhookUrl" placeholder="https://discord.com/api/webhooks/..." />
+        </label>
+        <label class="checkbox"><input type="checkbox" id="cfgDiscordNotifyServerStatus" /> Notify on server start/stop/restart warnings</label>
+        <label class="checkbox"><input type="checkbox" id="cfgDiscordNotifyModUpdates" /> Notify on mod updates</label>
+        <div class="row-buttons" style="margin-top:8px;">
+          <button id="btnToggleDiscordTemplates" class="btn">Customize message text</button>
+        </div>
+        <div id="discordTemplatesSection" style="display:none; margin-top:12px;">
+          <p class="meta">Placeholders in {curly braces} get filled in automatically — leave them as-is unless you want to remove one.</p>
+          <label>Server starting <span class="meta">{serverName}</span>
+            <input type="text" id="cfgDiscordMsgStarting" />
+          </label>
+          <label>Server stopped <span class="meta">{serverName}</span>
+            <input type="text" id="cfgDiscordMsgStopped" />
+          </label>
+          <label>Server crashed <span class="meta">{serverName} {code}</span>
+            <input type="text" id="cfgDiscordMsgCrashed" />
+          </label>
+          <label>Restart warning <span class="meta">{serverName} {minutes}</span>
+            <input type="text" id="cfgDiscordMsgRestartWarning" />
+          </label>
+          <label>Mods updated <span class="meta">{serverName} {names} {count}</span>
+            <input type="text" id="cfgDiscordMsgModsUpdated" />
+          </label>
+          <label>Auto-restart gave up <span class="meta">{serverName} {count} {windowMinutes}</span>
+            <input type="text" id="cfgDiscordMsgCrashGivingUp" />
+          </label>
+        </div>
+        <div class="row-buttons" style="margin-top:8px;">
+          <button id="btnDiscordTest" class="btn">Send test message</button>
+        </div>
+
+        <h3>Players tab <span class="meta">(optional)</span></h3>
+        <p>Add a free <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noopener">Steam Web API key</a> to show Steam persona names for players who haven't spawned a character yet.</p>
+        <label>Steam Web API key
+          <input type="text" id="cfgSteamApiKey" />
+        </label>
+
+        <h3>Dashboard access</h3>
+        <div class="warn-box">This dashboard has no login by default. It only listens on this machine unless you turn on network access below — <strong>never forward this port on your router</strong> regardless of any setting here; see the README for why.</div>
+        <label class="checkbox"><input type="checkbox" id="cfgAllowNetworkAccess" /> Allow access from other devices on my local network</label>
+        <p class="meta">Takes effect after fully restarting the manager (close the terminal/start.bat window and reopen it) — not just the game server.</p>
+
+        <h3>Login</h3>
+        <p>Strongly recommended if you've turned on network access above — otherwise anyone on your network can control the server with no password at all.</p>
+        <div id="authStatus" class="meta" style="margin-bottom:10px;"></div>
+        <label>Username
+          <input type="text" id="authUsername" autocomplete="off" />
+        </label>
+        <label>Password <span class="meta">(min. 8 characters — leave blank to keep your current one)</span>
+          <input type="password" id="authPassword" autocomplete="new-password" />
+        </label>
+        <div class="row-buttons">
+          <button id="btnEnableAuth" class="btn btn-primary">Save login</button>
+          <button id="btnDisableAuth" class="btn btn-danger">Turn off login</button>
+        </div>
+
+        <div class="row-buttons" style="margin-top:16px;">
+          <button id="btnSaveConfig3" class="btn btn-primary">Save settings</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODS -->
+    <section id="tab-mods" class="tab-panel">
+      <div class="card">
+        <h3>Import from a shared profile code</h3>
+        <p>Paste a profile code from Thunderstore Mod Manager, r2modman, or Gale ("Export code"). Works whether it lives on Thunderstore or Hexium, and handles profiles that mix mods from both. Installs BepInEx automatically if it's in the profile.</p>
+        <div class="row-buttons">
+          <input type="text" id="profileCode" placeholder="e.g. 019c9378-d2e6-4fec-5a2f-e4b22f8cf1d1" style="flex:1" />
+          <button id="btnImport" class="btn btn-primary">Import</button>
+        </div>
+        <div class="row-buttons">
+          <button id="btnBepinex" class="btn">Install BepInEx only</button>
+          <button id="btnDiscordConnector" class="btn">Install DiscordConnector</button>
+          <select id="exportBackendChoice" style="max-width:160px;">
+            <option value="">Auto-detect</option>
+            <option value="thunderstore">Thunderstore</option>
+            <option value="hexium">Hexium</option>
+          </select>
+          <button id="btnExportProfile" class="btn">Export current mods as code</button>
+        </div>
+        <div id="exportResult"></div>
+      </div>
+
+      <div class="card">
+        <h3>Search mods</h3>
+        <p>Search Thunderstore and Hexium by name or description and install directly — no need to know the exact author/mod name.</p>
+        <div class="row-buttons">
+          <input type="text" id="modSearchInput" placeholder="e.g. epic loot, better ui, more building" style="flex:1" />
+          <select id="modSearchSource" style="max-width:140px;">
+            <option value="all">Both sources</option>
+            <option value="thunderstore">Thunderstore</option>
+            <option value="hexium">Hexium</option>
+          </select>
+          <button id="btnModSearch" class="btn btn-primary">Search</button>
+        </div>
+        <ul id="modSearchResults" class="mod-list"></ul>
+      </div>
+
+      <div class="card">
+        <h3>Install a specific mod from Hexium</h3>
+        <p>Hexium is a newer, community-run mod site some Valheim authors have moved to (some mods are Hexium-exclusive now). Enter the author and mod name exactly as shown on the mod's Hexium page.</p>
+        <div class="row-buttons">
+          <input type="text" id="hexiumNamespace" placeholder="Author (e.g. shudnal)" style="flex:1" />
+          <input type="text" id="hexiumName" placeholder="Mod name (e.g. ConditionalConfigSync)" style="flex:1" />
+          <button id="btnInstallHexium" class="btn btn-primary">Install</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Import log</h3>
+        <pre id="logMods" class="console"></pre>
+      </div>
+
+      <div class="card">
+        <div class="row-buttons" style="justify-content: space-between; align-items: center;">
+          <h3 style="margin:0;">Installed mods</h3>
+          <div class="row-buttons" style="margin:0;">
+            <button id="btnCheckUpdates" class="btn">↻ Check for updates</button>
+            <button id="btnUpdateAll" class="btn btn-primary" style="display:none;">Update all</button>
+            <button id="btnRemoveAll" class="btn btn-danger">Remove all</button>
+          </div>
+        </div>
+        <ul id="modList" class="mod-list"></ul>
+      </div>
+    </section>
+
+    <!-- PLAYERS -->
+    <section id="tab-players" class="tab-panel">
+      <div class="card">
+        <h3>Online now</h3>
+        <p>Built from the server's own console log — no mod required. New connections show as "Connecting..." until their character loads in and a name is known.</p>
+        <ul id="onlineList" class="mod-list"></ul>
+      </div>
+      <div class="card">
+        <h3>Join / leave history</h3>
+        <ul id="playerHistoryList" class="mod-list"></ul>
+      </div>
+      <div class="card">
+        <h3>Death history</h3>
+        <p>Vanilla Valheim's dedicated server doesn't log deaths at all, so this only catches deaths if an installed mod happens to print one to the console — it's best-effort, and currently nothing does that reliably. <strong>DiscordConnector</strong> (Mods tab) does track deaths properly, but stores them in a binary database format this app can't read — so instead of showing up here, they go straight to your Discord channel, which is the more reliable place to check them anyway.</p>
+        <ul id="deathList" class="mod-list"></ul>
+      </div>
+    </section>
+
+    <!-- ACCESS -->
+    <section id="tab-access" class="tab-panel">
+      <div class="card">
+        <p>These write directly to <code>adminlist.txt</code>, <code>bannedlist.txt</code>, and <code>permittedlist.txt</code> in the server's save folder (updated automatically every time the server starts). Find a player's SteamID64 at <a href="https://steamid.io" target="_blank" rel="noopener">steamid.io</a>.</p>
+      </div>
+
+      <div class="card">
+        <h3>Admins <span class="meta">(can use in-game console commands)</span></h3>
+        <div class="row-buttons">
+          <input type="text" id="adminSteamId" placeholder="SteamID64" style="flex:1" />
+          <input type="text" id="adminName" placeholder="Nickname (optional)" style="flex:1" />
+          <button id="btnAddAdmin" class="btn btn-primary">Add</button>
+        </div>
+        <ul id="adminList" class="mod-list"></ul>
+      </div>
+
+      <div class="card">
+        <h3>Banned</h3>
+        <div class="row-buttons">
+          <input type="text" id="bannedSteamId" placeholder="SteamID64" style="flex:1" />
+          <input type="text" id="bannedName" placeholder="Nickname (optional)" style="flex:1" />
+          <button id="btnAddBanned" class="btn btn-primary">Add</button>
+        </div>
+        <ul id="bannedList" class="mod-list"></ul>
+      </div>
+
+      <div class="card">
+        <h3>Permitted <span class="meta">(whitelist, if your server uses one)</span></h3>
+        <div class="row-buttons">
+          <input type="text" id="permittedSteamId" placeholder="SteamID64" style="flex:1" />
+          <input type="text" id="permittedName" placeholder="Nickname (optional)" style="flex:1" />
+          <button id="btnAddPermitted" class="btn btn-primary">Add</button>
+        </div>
+        <ul id="permittedList" class="mod-list"></ul>
+      </div>
+    </section>
+
+    <!-- BACKUPS -->
+    <section id="tab-backups" class="tab-panel">
+      <div class="card">
+        <p>Backs up the whole world folder (works with both Valheim's current chunked format and the older .db/.fwl format — whichever applies). Stored separately from Valheim's own save data, in this app's own folder.</p>
+        <button id="btnCreateBackup" class="btn btn-primary">Create backup now</button>
+      </div>
+      <div class="card">
+        <h3>Backups</h3>
+        <ul id="backupList" class="mod-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

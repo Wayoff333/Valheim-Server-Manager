@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign in — Valheim Server Manager</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main style="max-width: 360px; margin: 90px auto 0;">
+    <div class="card">
+      <h3 style="margin-bottom: 16px;">⚔️ Sign in</h3>
+      <label>Username
+        <input type="text" id="username" autocomplete="username" />
+      </label>
+      <label>Password
+        <input type="password" id="password" autocomplete="current-password" />
+      </label>
+      <div class="row-buttons" style="margin-top: 16px;">
+        <button id="btnLogin" class="btn btn-primary" style="width:100%;">Sign in</button>
+      </div>
+      <p id="loginError" class="meta" style="color: var(--danger); display:none; margin-top: 10px;"></p>
+    </div>
+  </main>
+  <script src="login.js"></script>
+</body>
+</html>
